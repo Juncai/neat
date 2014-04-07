@@ -20,10 +20,16 @@
 
 //#define NO_SCREEN_OUT 
 //const std::string AI_PATH = "C:\\Program Files\\StarCraft\\bwapi-data\\AI\\";
-const std::string AI_PATH = "F:\\Games\\StarCraft00\\bwapi-data\\AI\\";
+//const std::string AI_PATH = "F:\\Games\\StarCraft00\\bwapi-data\\AI\\";
 
 // Perform evolution on BWAPI, for gens generations
 Population *bwapi_test(int gens) {
+	
+	// file path from initialization file
+	std::string popFileName;
+	std::string geneFileName;
+
+	// variables for neat
     Population *pop=0;
     Genome *start_genome;
     char curword[20];
@@ -49,14 +55,20 @@ Population *bwapi_test(int gens) {
     memset (genes, 0, NEAT::num_runs * sizeof(int));
     memset (nodes, 0, NEAT::num_runs * sizeof(int));
 
-    //ifstream iFile("F:\\Games\\StarCraft00\\bwapi-data\\AI\\multiunitstartgenes",ios::in);
-	ifstream iFile("multiunitstartgenes",ios::in);
+	// read file path from ini file
+	char pResult[255];
+	GetPrivateProfileString("General",  "popFileName", "", pResult, 255, configFile.c_str());
+	popFileName = pResult;
+	GetPrivateProfileString("neat",  "geneFileName", "", pResult, 255, configFile.c_str());
+	geneFileName = pResult;
 
+	//Read in the start Genome
+	ifstream iFile(geneFileName.c_str(), ios::in);
 
     cout<<"START BWAPI TEST"<<endl;
 
     cout<<"Reading in the start genome"<<endl;
-    //Read in the start Genome
+    
     iFile>>curword;
     iFile>>id;
     cout<<"Reading in Genome id "<<id<<endl;
@@ -71,10 +83,12 @@ Population *bwapi_test(int gens) {
       
       cout<<"Verifying Spawned Pop"<<endl;
       pop->verify();
-      std::ofstream oFile("F:\\Games\\StarCraft00\\bwapi-data\\AI\\population.txt");
+
+	  // write population of this generation to the population file, the first line is /* currentGeneration currentOrganismCount */
+	  std::ofstream oFile(popFileName.c_str());
 	  oFile << "/* " << 1 << " " << pop->organisms.size() << " */" << std::endl;
 	  oFile.close();
-	  pop->print_to_file_by_species("F:\\Games\\StarCraft00\\bwapi-data\\AI\\population.txt");
+	  pop->print_to_file_by_species(popFileName.c_str());	// !!this method is change to append the population to the exiting population file!!
       for (gen=1;gen<=gens;gen++) {
       	cout<<"Epoch "<<gen<<endl;	
 
@@ -229,8 +243,15 @@ int bwapi_epoch(Population *pop,int generation,char *filename,int &winnernum,int
 
   //ofstream cfilename(filename.c_str());
 
-  bool win=false;
+	// file path from inifile
+	std::string popFileName;
+	std::string resultFileName;
+	std::string fitnessFileName;
+	std::string winPopFileName;
+	std::string winGnomeFileName;
 
+	// variables for neat
+	bool win=false;
 	int orgIndex = 0;
 	int gen = -1;
 	int org = -1;
@@ -241,6 +262,20 @@ int bwapi_epoch(Population *pop,int generation,char *filename,int &winnernum,int
 	int allyMaxHP;
 	double fitness;
 	double curfitness;
+
+	// read file path from ini file
+	GetPrivateProfileString("General",  "popFileName", "", pResult, 255, configFile.c_str());
+	popFileName = pResult;
+	GetPrivateProfileString("General",  "resultFileName", "", pResult, 255, configFile.c_str());
+	resultFileName = pResult;
+	GetPrivateProfileString("neat",  "fitnessFileName", "", pResult, 255, configFile.c_str());
+	fitnessFileName = pResult;
+	GetPrivateProfileString("neat",  "winPopFileName", "", pResult, 255, configFile.c_str());
+	winPopFileName = pResult;
+	GetPrivateProfileString("neat",  "winGnomeFileName", "", pResult, 255, configFile.c_str());
+	winGnomeFileName = pResult;
+
+	// 
 	std::cout << "The number of organisms is: " << pop->organisms.size() <<std::endl;
   //Evaluate each organism on a test
   for(curorg=(pop->organisms).begin();curorg!=(pop->organisms).end();++curorg) {
@@ -249,7 +284,7 @@ int bwapi_epoch(Population *pop,int generation,char *filename,int &winnernum,int
 			  // need some delay?
 		  while(true){
 			  std::string line;
-			  std::ifstream iFile("F:\\Games\\StarCraft00\\bwapi-data\\AI\\fitness.txt");
+			  std::ifstream iFile(resultFileName.c_str());
 			  while(std::getline(iFile, line)){
 				  istringstream iss(line);
 				  iss >> gen >> org >> curround >> allyHP >> enemyHP >> allyMaxHP;
@@ -303,7 +338,7 @@ int bwapi_epoch(Population *pop,int generation,char *filename,int &winnernum,int
     max_fitness = (*curspecies)->compute_max_fitness();
 	std::cout << "The average fitness is " << average_fitness << std::endl;
 	std::cout << "The max fitness is " << max_fitness << std::endl;
-	std::ofstream oFile("F:\\Games\\StarCraft00\\bwapi-data\\AI\\fitness_rec.txt", std::fstream::app);
+	std::ofstream oFile(fitnessFileName.c_str(), std::fstream::app);
 	oFile << average_fitness << "," << max_fitness << std::endl;
 	oFile.close();
   }
@@ -320,7 +355,7 @@ int bwapi_epoch(Population *pop,int generation,char *filename,int &winnernum,int
 		  if((*curorg)->fitness > 1.2){
 			  (*curorg)->winner = true;
 			  win = true;
-			  pop->print_to_file_by_species("F:\\Games\\StarCraft00\\bwapi-data\\AI\\bwapi_winner_pop");
+			  pop->print_to_file_by_species(winPopFileName.c_str());
 		  }
     }
   //}
@@ -338,17 +373,19 @@ int bwapi_epoch(Population *pop,int generation,char *filename,int &winnernum,int
 	cout<<"WINNER IS #"<<((*curorg)->gnome)->genome_id<<endl;
 	//Prints the winner to file
 	//IMPORTANT: This causes generational file output!
-	print_Genome_tofile((*curorg)->gnome,"F:\\Games\\StarCraft00\\bwapi-data\\AI\\bwapi_winner");
+	print_Genome_tofile((*curorg)->gnome,winGnomeFileName.c_str());
       }
     }
     
   }
 
+  // evolve the population
   pop->epoch(generation);
-  std::ofstream oFile("F:\\Games\\StarCraft00\\bwapi-data\\AI\\population.txt");
+  // write new generaion into population file, the first line is /* nextGeneration currentOrganismCount */
+  std::ofstream oFile(popFileName.c_str());
   oFile << "/* " << generation + 1 << " " << pop->organisms.size() << " */" << std::endl;
   oFile.close();
-  pop->print_to_file_by_species("F:\\Games\\StarCraft00\\bwapi-data\\AI\\population.txt");
+  pop->print_to_file_by_species(popFileName.c_str());
 
   if (win) return 1;
   else return 0;
@@ -487,15 +524,9 @@ bool xor_evaluate(Organism *org) {
   int net_depth; //The max depth of the network to be activated
   int relax; //Activates until relaxation
 
-  //The four possible input combinations to xor
-  //The first number is for biasing
-  double in[4][3]={{1.0,0.0,0.0},
-		   {1.0,0.0,1.0},
-		   {1.0,1.0,0.0},
-		   {1.0,1.0,1.0}};
   
   net=org->net;
-  numnodes=((org->gnome)->nodes).size();
+  numnodes=((org->gnome)->nodes).size();		// there is a typo in gnome!!
 
   net_depth=net->max_depth();
 
