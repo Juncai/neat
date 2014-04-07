@@ -17,12 +17,15 @@
 #include <cstring>
 #include <stdlib.h>
 #include <fstream>
+#include <Windows.h>
 
 //#define NO_SCREEN_OUT 
 //const std::string AI_PATH = "C:\\Program Files\\StarCraft\\bwapi-data\\AI\\";
 //const std::string AI_PATH = "F:\\Games\\StarCraft00\\bwapi-data\\AI\\";
+const std::string configFile = "F:\\Games\\StarCraft00\\bwapi-data\\AI\\nncontroller_config.ini";
 
-// Perform evolution on BWAPI, for gens generations
+// Perform evolution on BWAPI, for gens generations, the input gens has been disabled. The real gens will 
+// be read from ini file
 Population *bwapi_test(int gens) {
 	
 	// file path from initialization file
@@ -54,6 +57,9 @@ Population *bwapi_test(int gens) {
     memset (evals, 0, NEAT::num_runs * sizeof(int));
     memset (genes, 0, NEAT::num_runs * sizeof(int));
     memset (nodes, 0, NEAT::num_runs * sizeof(int));
+
+	// read gens from ini file
+	gens = GetPrivateProfileInt("General", "gens", 1, configFile.c_str());
 
 	// read file path from ini file
 	char pResult[255];
@@ -87,8 +93,8 @@ Population *bwapi_test(int gens) {
 	  // write population of this generation to the population file, the first line is /* currentGeneration currentOrganismCount */
 	  std::ofstream oFile(popFileName.c_str());
 	  oFile << "/* " << 1 << " " << pop->organisms.size() << " */" << std::endl;
+	  pop->print_to_file_by_species(oFile);	// !!this method is change to append the population to the exiting population file!!
 	  oFile.close();
-	  pop->print_to_file_by_species(popFileName.c_str());	// !!this method is change to append the population to the exiting population file!!
       for (gen=1;gen<=gens;gen++) {
       	cout<<"Epoch "<<gen<<endl;	
 
@@ -248,7 +254,7 @@ int bwapi_epoch(Population *pop,int generation,char *filename,int &winnernum,int
 	std::string resultFileName;
 	std::string fitnessFileName;
 	std::string winPopFileName;
-	std::string winGnomeFileName;
+	std::string winGenomeFileName;
 
 	// variables for neat
 	bool win=false;
@@ -256,6 +262,7 @@ int bwapi_epoch(Population *pop,int generation,char *filename,int &winnernum,int
 	int gen = -1;
 	int org = -1;
 	int curround = -1;
+	int rounds;
 	int otherNum;
 	int allyHP;
 	int enemyHP;
@@ -263,7 +270,10 @@ int bwapi_epoch(Population *pop,int generation,char *filename,int &winnernum,int
 	double fitness;
 	double curfitness;
 
+	// read rounds from ini file
+	rounds = GetPrivateProfileInt("General",  "rounds", 1, configFile.c_str());
 	// read file path from ini file
+	char pResult[255];
 	GetPrivateProfileString("General",  "popFileName", "", pResult, 255, configFile.c_str());
 	popFileName = pResult;
 	GetPrivateProfileString("General",  "resultFileName", "", pResult, 255, configFile.c_str());
@@ -272,15 +282,15 @@ int bwapi_epoch(Population *pop,int generation,char *filename,int &winnernum,int
 	fitnessFileName = pResult;
 	GetPrivateProfileString("neat",  "winPopFileName", "", pResult, 255, configFile.c_str());
 	winPopFileName = pResult;
-	GetPrivateProfileString("neat",  "winGnomeFileName", "", pResult, 255, configFile.c_str());
-	winGnomeFileName = pResult;
+	GetPrivateProfileString("neat",  "winGenomeFileName", "", pResult, 255, configFile.c_str());
+	winGenomeFileName = pResult;
 
 	// 
 	std::cout << "The number of organisms is: " << pop->organisms.size() <<std::endl;
   //Evaluate each organism on a test
   for(curorg=(pop->organisms).begin();curorg!=(pop->organisms).end();++curorg) {
 	  fitness = 0;
-	  for(int i = 0; i < 5; i++){
+	  for(int i = 0; i < rounds; i++){
 			  // need some delay?
 		  while(true){
 			  std::string line;
@@ -355,7 +365,9 @@ int bwapi_epoch(Population *pop,int generation,char *filename,int &winnernum,int
 		  if((*curorg)->fitness > 1.2){
 			  (*curorg)->winner = true;
 			  win = true;
-			  pop->print_to_file_by_species(winPopFileName.c_str());
+			  std::ofstream oFile(winPopFileName.c_str());
+			  pop->print_to_file_by_species(oFile);
+			  oFile.close();
 		  }
     }
   //}
@@ -373,7 +385,7 @@ int bwapi_epoch(Population *pop,int generation,char *filename,int &winnernum,int
 	cout<<"WINNER IS #"<<((*curorg)->gnome)->genome_id<<endl;
 	//Prints the winner to file
 	//IMPORTANT: This causes generational file output!
-	print_Genome_tofile((*curorg)->gnome,winGnomeFileName.c_str());
+	print_Genome_tofile((*curorg)->gnome,winGenomeFileName.c_str());
       }
     }
     
@@ -384,8 +396,8 @@ int bwapi_epoch(Population *pop,int generation,char *filename,int &winnernum,int
   // write new generaion into population file, the first line is /* nextGeneration currentOrganismCount */
   std::ofstream oFile(popFileName.c_str());
   oFile << "/* " << generation + 1 << " " << pop->organisms.size() << " */" << std::endl;
+  pop->print_to_file_by_species(oFile);
   oFile.close();
-  pop->print_to_file_by_species(popFileName.c_str());
 
   if (win) return 1;
   else return 0;
@@ -524,6 +536,13 @@ bool xor_evaluate(Organism *org) {
   int net_depth; //The max depth of the network to be activated
   int relax; //Activates until relaxation
 
+  //The four possible input combinations to xor
+  //The first number is for biasing
+  double in[4][3]={{1.0,0.0,0.0},
+		   {1.0,0.0,1.0},
+		   {1.0,1.0,0.0},
+		   {1.0,1.0,1.0}};
+
   
   net=org->net;
   numnodes=((org->gnome)->nodes).size();		// there is a typo in gnome!!
@@ -533,6 +552,9 @@ bool xor_evaluate(Organism *org) {
   //TEST CODE: REMOVE
   //cout<<"ACTIVATING: "<<org->gnome<<endl;
   //cout<<"DEPTH: "<<net_depth<<endl;
+
+
+
 
   //Load and activate the network on each input
   for(count=0;count<=3;count++) {
