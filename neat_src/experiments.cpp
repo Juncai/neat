@@ -20,9 +20,8 @@
 #include <Windows.h>
 
 //#define NO_SCREEN_OUT 
-//const std::string AI_PATH = "C:\\Program Files\\StarCraft\\bwapi-data\\AI\\";
-//const std::string AI_PATH = "F:\\Games\\StarCraft00\\bwapi-data\\AI\\";
-const std::string configFile = "F:\\Games\\StarCraft00\\bwapi-data\\AI\\nncontroller_config.ini";
+//const std::string configFile = "F:\\Games\\StarCraft00\\bwapi-data\\AI\\nncontroller_config.ini";
+const std::string configFile = "C:\\Program Files\\StarCraft\\bwapi-data\\AI\\nncontroller_config.ini";
 
 // Perform evolution on BWAPI, for gens generations, the input gens has been disabled. The real gens will 
 // be read from ini file
@@ -65,10 +64,12 @@ Population *bwapi_test(int gens) {
 	char pResult[255];
 	GetPrivateProfileString("General",  "popFileName", "", pResult, 255, configFile.c_str());
 	popFileName = pResult;
+	//pResult.clear();
 	GetPrivateProfileString("neat",  "geneFileName", "", pResult, 255, configFile.c_str());
 	geneFileName = pResult;
 
 	//Read in the start Genome
+	//ifstream iFile("C:\Documents and Settings\Administrator\My Documents\git_cs5100\neat_project\exe\Release\", ios::in);
 	ifstream iFile(geneFileName.c_str(), ios::in);
 
     cout<<"START BWAPI TEST"<<endl;
@@ -80,7 +81,7 @@ Population *bwapi_test(int gens) {
     cout<<"Reading in Genome id "<<id<<endl;
     start_genome=new Genome(id,iFile);
     iFile.close();
-
+	cout<<"num_runs "<<NEAT::num_runs<<endl;
     for(expcount=0;expcount<NEAT::num_runs;expcount++) {
       //Spawn the Population
       cout<<"Spawning Population off Genome2"<<endl;
@@ -293,6 +294,9 @@ int bwapi_epoch(Population *pop,int generation,char *filename,int &winnernum,int
 	  for(int i = 0; i < rounds; i++){
 			  // need some delay?
 		  while(true){
+			  //std::cout << "I am sleeping" << std::endl;
+			  Sleep(1000);
+			  //std::cout << "I am wake up" << std::endl;
 			  std::string line;
 			  std::ifstream iFile(resultFileName.c_str());
 			  while(std::getline(iFile, line)){
@@ -361,8 +365,11 @@ int bwapi_epoch(Population *pop,int generation,char *filename,int &winnernum,int
   
   // Set the organism in the last generation with highest fitness as the winner
   //if(generation == 10) {
+  GetPrivateProfileString("neat", "winner_fitness", "1.0", pResult, 255, configFile.c_str());
+  std::string wFitnessStr = pResult;
+  double winner_fitness = atof(wFitnessStr.c_str());
 	  for(curorg=(pop->organisms).begin();curorg!=(pop->organisms).end();++curorg) {
-		  if((*curorg)->fitness > 1.2){
+		  if((*curorg)->fitness > winner_fitness){
 			  (*curorg)->winner = true;
 			  win = true;
 			  std::ofstream oFile(winPopFileName.c_str());
