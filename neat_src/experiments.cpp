@@ -341,6 +341,7 @@ int bwapi_epoch(Population *pop,int generation,char *filename,int &winnernum,int
   //Average and max their fitnesses for dumping to file and snapshot
   double average_fitness = 0;
   double max_fitness = 0;
+  double max_fitness_all = 0;
   for(curspecies=(pop->species).begin();curspecies!=(pop->species).end();++curspecies) {
 
     //This experiment control routine issues commands to collect ave
@@ -350,6 +351,9 @@ int bwapi_epoch(Population *pop,int generation,char *filename,int &winnernum,int
 
     average_fitness = (*curspecies)->compute_average_fitness();
     max_fitness = (*curspecies)->compute_max_fitness();
+	if(max_fitness_all < max_fitness){
+		max_fitness_all = max_fitness;
+	}
 	std::cout << "The average fitness is " << average_fitness << std::endl;
 	std::cout << "The max fitness is " << max_fitness << std::endl;
 	std::ofstream oFile(fitnessFileName.c_str(), std::fstream::app);
@@ -369,21 +373,17 @@ int bwapi_epoch(Population *pop,int generation,char *filename,int &winnernum,int
   std::string wFitnessStr = pResult;
   int maxGen = GetPrivateProfileInt("General", "gens", 1, configFile.c_str());
   double winner_fitness = atof(wFitnessStr.c_str());
+  if(max_fitness_all > winner_fitness || generation == maxGen){
 	  for(curorg=(pop->organisms).begin();curorg!=(pop->organisms).end();++curorg) {
-		  if(generation == maxGen && (*curorg)->fitness == max_fitness){
+		  if((*curorg)->fitness == max_fitness_all){
 			  (*curorg)->winner = true;
 			  win = true;
 			  std::ofstream oFile(winPopFileName.c_str());
 			  pop->print_to_file_by_species(oFile);
 			  oFile.close();
-		  } else if((*curorg)->fitness > winner_fitness){
-			  (*curorg)->winner = true;
-			  win = true;
-			  std::ofstream oFile(winPopFileName.c_str());
-			  pop->print_to_file_by_species(oFile);
-			  oFile.close();
-		  }
+		  } 
     }
+  }
   //}
   
   
