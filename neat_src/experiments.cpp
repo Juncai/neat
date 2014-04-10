@@ -20,7 +20,7 @@
 #include <Windows.h>
 
 //#define NO_SCREEN_OUT 
-const std::string configFile = "F:\\Games\\StarCraft00\\bwapi-data\\AI\\nncontroller_config.ini";
+const std::string configFile = "E:\\Games\\StarCraft00\\bwapi-data\\AI\\nncontroller_config.ini";
 //const std::string configFile = "C:\\Program Files\\StarCraft\\bwapi-data\\AI\\nncontroller_config.ini";
 
 // Perform evolution on BWAPI, for gens generations, the input gens has been disabled. The real gens will 
