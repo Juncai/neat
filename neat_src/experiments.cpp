@@ -367,9 +367,16 @@ int bwapi_epoch(Population *pop,int generation,char *filename,int &winnernum,int
   //if(generation == 10) {
   GetPrivateProfileString("neat", "winner_fitness", "1.0", pResult, 255, configFile.c_str());
   std::string wFitnessStr = pResult;
+  int maxGen = GetPrivateProfileInt("General", "gens", 1, configFile.c_str());
   double winner_fitness = atof(wFitnessStr.c_str());
 	  for(curorg=(pop->organisms).begin();curorg!=(pop->organisms).end();++curorg) {
-		  if((*curorg)->fitness > winner_fitness){
+		  if(generation == maxGen && (*curorg)->fitness == max_fitness){
+			  (*curorg)->winner = true;
+			  win = true;
+			  std::ofstream oFile(winPopFileName.c_str());
+			  pop->print_to_file_by_species(oFile);
+			  oFile.close();
+		  } else if((*curorg)->fitness > winner_fitness){
 			  (*curorg)->winner = true;
 			  win = true;
 			  std::ofstream oFile(winPopFileName.c_str());
