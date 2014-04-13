@@ -356,10 +356,30 @@ int bwapi_epoch(Population *pop,int generation,char *filename,int &winnernum,int
 	}
 	std::cout << "The average fitness is " << average_fitness << std::endl;
 	std::cout << "The max fitness is " << max_fitness << std::endl;
-	std::ofstream oFile(fitnessFileName.c_str(), std::fstream::app);
-	oFile << average_fitness << "," << max_fitness << std::endl;
-	oFile.close();
   }
+
+  // record max fitness and average fitness by generation
+  max_fitness_all = 0;
+  average_fitness = 0;
+  for(curorg=(pop->organisms).begin();curorg!=(pop->organisms).end();++curorg) {
+	  average_fitness += (*curorg)->fitness;
+	  if(max_fitness_all < (*curorg)->fitness){
+		  max_fitness_all = (*curorg)->fitness;
+	  }
+    }
+  average_fitness /= pop->organisms.size();
+  std::ofstream* fitnessOFile;
+  if(generation == 1){
+	  fitnessOFile = new std::ofstream(fitnessFileName.c_str(), std::fstream::app);
+  } else {
+      fitnessOFile = new std::ofstream(fitnessFileName.c_str());
+  }
+  *fitnessOFile << average_fitness << "," << max_fitness_all << std::endl;
+  (*fitnessOFile).close();
+  delete fitnessOFile;
+  fitnessOFile = NULL;
+
+
 
   //Take a snapshot of the population, so that it can be
   //visualized later on
