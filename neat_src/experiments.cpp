@@ -22,6 +22,7 @@
 //#define NO_SCREEN_OUT 
 const std::string configFile = "E:\\Games\\StarCraft00\\bwapi-data\\AI\\nncontroller_config.ini";
 //const std::string configFile = "C:\\Program Files\\StarCraft\\bwapi-data\\AI\\nncontroller_config.ini";
+double maxFitnessOverall = 0;
 
 // Perform evolution on BWAPI, for gens generations, the input gens has been disabled. The real gens will 
 // be read from ini file
@@ -357,50 +358,46 @@ int bwapi_epoch(Population *pop,int generation,char *filename,int &winnernum,int
   }
 
   // record max fitness and average fitness by generation
-  max_fitness_all = 0;
+  double max_fitness_all = 0;
+  NEAT::Organism* winnerOrg;
   average_fitness = 0;
   for(curorg=(pop->organisms).begin();curorg!=(pop->organisms).end();++curorg) {
 	  average_fitness += (*curorg)->fitness;
 	  if(max_fitness_all < (*curorg)->fitness){
 		  max_fitness_all = (*curorg)->fitness;
+		  winnerOrg = (*curorg);
 	  }
     }
   average_fitness /= pop->organisms.size();
   std::ofstream* fitnessOFile;
+  
   if(generation == 1){
-	  fitnessOFile = new std::ofstream(fitnessFileName.c_str(), std::fstream::app);
+	  fitnessOFile = new std::ofstream(fitnessFileName.c_str());
   } else {
-      fitnessOFile = new std::ofstream(fitnessFileName.c_str());
+      fitnessOFile = new std::ofstream(fitnessFileName.c_str(), std::fstream::app);
   }
   *fitnessOFile << average_fitness << "," << max_fitness_all << std::endl;
   (*fitnessOFile).close();
   delete fitnessOFile;
   fitnessOFile = NULL;
 
+  // record the best organism
+  if(maxFitnessOverall < max_fitness_all){
+	  maxFitnessOverall = max_fitness_all;
+	GetPrivateProfileString("neat", "bestOrgFile", "", pResult, 255, configFile.c_str());
+	std::string bestOrgFileName = pResult;
+	//print_Genome_tofile(winnerOrg->gnome,bestOrgFileName.c_str());
+	std::ofstream oFile(bestOrgFileName.c_str());
+	pop->print_to_file_by_species(oFile);
+	oFile.close();
+  }
 
-
-  //Take a snapshot of the population, so that it can be
-  //visualized later on
-  //if ((generation%1)==0)
-  //  pop->snapshot();
-  
-  
-  // Set the organism in the last generation with highest fitness as the winner
+    // Set the organism in the last generation with highest fitness as the winner
   //if(generation == 10) {
   GetPrivateProfileString("neat", "winner_fitness", "1.0", pResult, 255, configFile.c_str());
   std::string wFitnessStr = pResult;
   int maxGen = GetPrivateProfileInt("General", "gens", 1, configFile.c_str());
   double winner_fitness = atof(wFitnessStr.c_str());
-  double max_fitness_all = 0;
-  NEAT::Organism* winnerOrg;
-   for(curorg=(pop->organisms).begin();curorg!=(pop->organisms).end();++curorg) {
-	   if(max_fitness_all < (*curorg)->fitness){
-			max_fitness_all = (*curorg)->fitness;
-			winnerOrg = *curorg;
-		}
-    }
-
-
   if(max_fitness_all > winner_fitness || generation == maxGen){
 	  winnerOrg->winner = true;
 	  win = true;
@@ -409,6 +406,15 @@ int bwapi_epoch(Population *pop,int generation,char *filename,int &winnernum,int
 	  oFile.close();
   }
   //}
+
+
+  //Take a snapshot of the population, so that it can be
+  //visualized later on
+  //if ((generation%1)==0)
+  //  pop->snapshot();
+  
+  
+
   
   
   //Only print to file every print_every generations
